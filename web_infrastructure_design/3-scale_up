@@ -1,0 +1,20 @@
+Application server vs Web server
+
+A web server serves static content (HTML, CSS, images, etc.) and forwards dynamic requests.  
+An application server runs business logic and generates dynamic content.  
+Both usually work together: web server for static + proxy, application server for logic.
+
+
+Infrastructure
+
+2 HAProxy load balancers (cluster) → high availability, load distribution.  
+1 Web server (Nginx) → static content, SSL termination.  
+1 Application server → runs code/business logic.  
+1 Database server (MySQL) → persistent data storage.  
+
+
+Why
+
+HAProxy cluster prevents downtime.  
+Splitting components improves scalability, flexibility, and security.  
+Database separated for consistency and reliability.
