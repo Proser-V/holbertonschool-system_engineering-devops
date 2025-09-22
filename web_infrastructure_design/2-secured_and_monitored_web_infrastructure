@@ -1,0 +1,45 @@
+How it works
+
+1. The user types www.foobar.com into their browser.
+2. The browser dose not know where www.foobar.com is? It only understands IP addresses, so the browser asks the DNS system : "What is the IP address of www.foobar.com?"
+    -> "www" is an address record mapping a name (like www.foobar.com) to an IP address of the load-balancer (HAProxy).
+    -> This IP is the public entry point to our infrastructure.
+3. The browser established a TCP connection (port 80 for HTTP or 443 for HTTPS) to the load-balancer.
+    -> The user's computer and HAProxy exchange packets over the internet using TCP/IP.
+    -> If HTTPS is configured, SSL/TLS negotation also happens here (ensuring encryption and authenticity of the communication).
+4. The HAProxy load-balancer receives the request.
+    -> HAProxy checks its pool of backend servers (App Server 1 and App Server 2).
+    -> It selects one based on the configured algotithm.
+    -> It also ensures the chosen server is "healthy" via health checks.
+    -> Before forwarding, HAProxy applies security filtering through firewalls and rate limitine (to mitigate DDoS or abusive queries)
+5. The choser App server receives the request that reaches the web server (Nginx). The role of the web server is to handle HTTP requests, serve static files liake images or CSS, and forward dynamic requests to the application server.
+    -> Nginx also enforces HTTPS/SSL rules and can block suspicious requests.
+6. The application server then runs the code base (application files) that powers the website.
+    -> At this level, monitoring tools track QPS (querries per second), latency, and errors to detect performance or security issues.
+7. If the application needs to store or retrieve information, it communicates with the MySQL database (that stores the site's data).
+    -> Database queries are also monitored and can be rate-limited to prevent abuse or injection attempts.
+8. The application server then generates a response (like JSON, etc...), sends it back to Nginx, and Nginx delivers it to the HAProxy.
+9. The HAProxy delivers it to the user's browser.
+10. The user can now see the website.
+
+
+Components
+
+Firewalls : block unauthorized traffic and reduce attack surface.
+HTTPS : secures data between user and server.
+Monitoring : provides visibility (errors, performance, security).
+Monitoring collection : clients send metrics/logs (CPU, memory, QPS, HTTP codes) to a central system.
+To monitor QPS : configure monitoring to collect web server request rate.
+
+Added elements
+
+Firewalls (x3) :  pretect load-balancer, app servers, and database by filtering incoming/outgoing traffic.
+SSL certificate : ensures encrypted HTTPS traffic, protecting confidentiality and integrity.
+Monitoring clients (x3) : installed on each server to collect logs, metrics, and send them to a service like Sumologic.
+
+
+Issues with this infrastructure
+
+1. SSL termination at load balancer : traffic between load balancer and app servers is unencrypted.
+2. Only one MySQL Primary : SPOF for writes (failure stops write operations).
+3. Servers with all components : lack of separation of concerns, harder scaling, risk of resource contention.
