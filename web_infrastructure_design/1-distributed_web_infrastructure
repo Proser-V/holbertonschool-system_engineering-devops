@@ -1,0 +1,67 @@
+How it works
+
+1. The user types www.foobar.com into their browser.
+2. The browser dose not know where www.foobar.com is? It only understands IP addresses, so the browser asks the DNS system : "What is the IP address of www.foobar.com?"
+    -> "www" is an address record mapping a name (like www.foobar.com) to an IP address of the load-balancer (HAProxy).
+    -> This IP is the public entry point to our infrastructure.
+3. The browser established a TCP connection (port 80 for HTTP or 443 for HTTPS) to the load-balancer.
+    -> The user's computer and HAProxy exchange packets over the internet using TCP/IP.
+    -> If HTTPS is configured, SSL/TLS negotation also happens here.
+4. The HAProxy load-balancer receives the request.
+    -> HAProxy checks its pool of backend servers (App Server 1 and App Server 2).
+    -> It selects one based on the configured algotithm.
+    -> It also ensures the chosen server is "healthy" via health checks.
+5. The choser App server receives the request that reaches the web server (Nginx). The role of the web server is to handle HTTP requests, serve static files liake images or CSS, and forward dynamic requests to the application server.
+6. The application server then runs the code base (application files) that powers the website.
+7. If the application needs to store or retrieve information, it communicates with the MySQL database (that stores the site's data).
+8. The application server then generates a response (like JSON, etc...), sends it back to Nginx, and Nginx delivers it to the HAProxy.
+9. The HAProxy delivers it to the user's browser.
+10. The user can now see the website.
+
+
+Components
+
+Domain : foobar.com with "www" record pointing to load-balancer IP.
+Load balancer (HAProxy) : a device or service that distributes network traffic across multiple servers to ensure no single server becomes overwhelmed.
+Application server x2 : each has Nginx, an application server, and the application files.
+Database : MySQL toring website data.
+
+
+Added elements
+
+HAProxy :  distribute traffic and perform health checks.
+2 App Servers : horizontal redundancy and capacity.
+Primary/Replica DB : redundancy for reads and failover capability.
+
+
+Load-balancer algorithm
+
+Round-robin (with health checks): HAProxy sends requests in turn to healthy backends.
+    -> Simple and effective for identical servers.
+
+
+Active-Active vs Active-Passive
+
+This design uses Active-Active for the app tier : both app servers serve traffic concurrently
+Active-Passive : one server is active, the other is a standby used only on failure.
+
+
+Primary-Replica DB behavior
+
+Primary accepts writes (INSERT/UPDATE/DELETE).
+Replica receives replicated data and can serve read-only queries.
+Replication may be asynchronous -> replica lag possible.
+Application must send writes to Primary; read-routing can go to Replica for scale.
+
+
+Differences Primary vs Replica for the application
+
+Primary : handle writes and consistent reads.
+Replica : handle read traffic to reduce load on Primary.
+
+
+Issues with this infrastructure
+
+1. SPOF (Single Point of Failure) : single HAProxy instance and the Primary DB are single points of failure.
+2. Security : no firewall, no HTTPS/TLS, DB exposed if misconfigureds.
+3. No monitoring : no alerts, no metrics, no log aggregation.
